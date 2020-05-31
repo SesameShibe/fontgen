@@ -207,7 +207,7 @@ def generateBinaryFont16(ttfPath, bdfPath, fltr, padding, baseline, savePath):
         w('FONT')
 
         # Section count
-        w(struct.pack('HH', 3, 1))
+        w(struct.pack('HH', 3, 2))
         w('\x00'*14*3)
 
         keys1 = sorted(halfWidthFont.Chars.keys())
@@ -228,27 +228,26 @@ def generateBinaryFont16(ttfPath, bdfPath, fltr, padding, baseline, savePath):
 
         fnt.seek(8, 0)
 
-        # Code range
-        w(struct.pack('<HH', 0, 0x4FF))
-        # Char width
-        w(struct.pack('<H', 8))
-        # Char height
-        w(struct.pack('<H', 13))
-        # Glyph data lenght
-        w(struct.pack('<H', halfWidthFont.GlyphDataLength))
-        w(struct.pack('<I', font1DataOffset))
+        writeSection(w, 0, 0x4FF, 8, 13,
+                     halfWidthFont.GlyphDataLength, font1DataOffset)
 
-        w(struct.pack('<HH', 0x3000, 0x9FFF))
-        w(struct.pack('<H', 16))
-        w(struct.pack('<H', 16))
-        w(struct.pack('<H', fullWidthFont1.GlyphDataLength))
-        w(struct.pack('<I', font2DataOffset))
+        writeSection(w, 0x3000, 0x9FFF, 16, 16,
+                     fullWidthFont1.GlyphDataLength, font2DataOffset)
 
-        w(struct.pack('<HH', 0xF900, 0xFFFF))
-        w(struct.pack('<H', 16))
-        w(struct.pack('<H', 16))
-        w(struct.pack('<H', fullWidthFont2.GlyphDataLength))
-        w(struct.pack('<I', font3DataOffset))
+        writeSection(w, 0xF900, 0xFFFF, 16, 16,
+                     fullWidthFont2.GlyphDataLength, font3DataOffset)
+
+
+def writeSection(writer, codeStart, codeEnd, charWidth, charHeight, entrySize, dataOffset):
+    # Code range
+    writer(struct.pack('<HH', codeStart, codeEnd))
+    # Char width
+    writer(struct.pack('<B', charWidth))
+    # Char height
+    writer(struct.pack('<B', charHeight))
+    # Glyph data lenght
+    writer(struct.pack('<H', entrySize))
+    writer(struct.pack('<I', dataOffset))
 
 
 def compressGlyphBmp(bs, fltr):
@@ -317,7 +316,8 @@ if __name__ == "__main__":
         parser = argparse.ArgumentParser(
             description="Nintendo CTR Font Converter Text Filter(xllt) Generator.")
         parser.add_argument('-t', '--ttf', help="Set TrueType font file path.")
-        parser.add_argument('-d', '--bdf', help="Set Bitmap font file path for ascii chars.")
+        parser.add_argument(
+            '-d', '--bdf', help="Set Bitmap font file path for ascii chars.")
         parser.add_argument(
             '-s', '--size', help="Set font width.", nargs=2, type=int)
         parser.add_argument(
